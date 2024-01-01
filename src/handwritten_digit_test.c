@@ -4,87 +4,43 @@
 #include <time.h>
 
 #include "nn.c"
-
-void PrintImage(float *data, int width, int height)
-{
-    printf("\n");
-    for (int y = 0; y < height; y++)
-    {
-        for (int x = 0; x < width; x++)
-        {
-            if(data[y * width + x] > 0.0)
-                // printf("\033[0;33m%0.2f ", data[y * width + x]);
-                printf("#");
-            else
-                printf(" ");
-        }
-        printf("\n");
-    }
-    printf("\n");
-}
+#include "util.c"
 
 int main(int argc, char *argv[])
 {
-    // pixel data
-    unsigned char *data = 0;
+    char *data = ReadBinaryFileIntoMemory("data/training_data/t10k-images.idx3-ubyte");
+    if(!data) return 0;
 
-    FILE *dataFile = fopen("t10k-images.idx3-ubyte", "rb");
+    char *label = ReadBinaryFileIntoMemory("data/training_data/t10k-labels.idx1-ubyte");
+    if(!label) return 0;
 
-    if (dataFile)
-    {
-        fseek(dataFile, 0, SEEK_END);
-        unsigned int size = ftell(dataFile);
-        fseek(dataFile, 0, SEEK_SET);
-        data = (char *)malloc(size);
-        fread(data, 1, size, dataFile);
-        fclose(dataFile);
-    }
-    else
-    {
-        printf("error: failed to open data file !\n");
-        return 1;
-    }
+    // char *data = ReadBinaryFileIntoMemory("data/training_data/train-images.idx3-ubyte");
+    // if (!data) return 1;
 
-    FILE *labelFile = fopen("t10k-labels.idx1-ubyte", "rb");
+    // char *label = ReadBinaryFileIntoMemory("data/training_data/train-labels.idx1-ubyte");
+    // if (!label) return 1;
+
+    Net net = LoadNetworkFromFile("digit_90.wanb");
+    net.layers[0].activationFunc = LINEAR;
+    net.layers[1].activationFunc = RELU;
+    net.layers[2].activationFunc = RELU;
+    net.layers[3].activationFunc = SOFTMAX;
     
-    unsigned char *label = 0;
-    if (labelFile)
-    {
-        fseek(labelFile, 0, SEEK_END);
-        unsigned int size = ftell(labelFile);
-        fseek(labelFile, 0, SEEK_SET);
-        label = (char *)malloc(size);
-        fread(label, 1, size, labelFile);
-        fclose(labelFile);
-    }
-    else
-    {
-        printf("error: failed to open label file !\n");
-        return 1;
-    }
-
-    // printf("data file magic number: %x\n", *((int *)data));
-    // printf("data file item count: %x\n", *(int *)(data + 4));
-    // printf("label file magic number: %x\n", *((int *)label));
-    // printf("label file item count: %x\n", *(int *)(label + 4));
-
-    Net net = LoadNetworkFromFile("digit.wanb");
-    // printf("%d\n", net.layerCount);
-
     int correctPrediction = 0;
-    int total = 10000;
+    int total = 10;
     for (unsigned long i = 0; i < total; i++)
     {
         float input[28 * 28] = {0};
 
         for (int n = 0; n < (28 * 28); n++)
         {
-            input[n] = ((float)*(data + (4 * 4) + (i * 28 * 28) + n)) / 255.0;
+            input[n] = ((float)*(data + (4 * 4) + (i * 28 * 28) + n)) / 255.0f;
         }
 
-        FeedForward(&net, input, 28 * 28);
+        _FeedForward(&net, input, 28 * 28);
 
-        int digit = (int)*(label + (4 * 2) + i);
+        int digit = (int)(*(label + (4 * 2) + i));
+        // printf("digit: %d\n", digit);
 
         float prob = 0;
         int prediction = -1;
@@ -103,11 +59,20 @@ int main(int argc, char *argv[])
         }
         else
         {
-            // printf("target: %d, prediction: %d\n", digit, prediction);
+            printf("output: ");
+            for (int n = 0; n < 10; n++)
+            {
+                float a = net.layers[net.layerCount - 1].neurons[n].activation;
+                printf("%f ", a);
+            }
+            printf("\n");
+            printf("target: %d, prediction: %d\n", digit, prediction);
             // PrintImage(input, 28, 28);
         }
     }
 
-    printf("accuracy : %0.3f\n", (float)correctPrediction / (float)total);
+    printf("correct / total : %d / %d\n", correctPrediction, total);
+    printf("accuracy : %0.4f\n", (float)correctPrediction / (float)total);
+
     return 0;
 }

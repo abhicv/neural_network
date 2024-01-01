@@ -23,27 +23,41 @@ float data[11][2] = {
 
 int main(int argc, char *argv[])
 {
-    int topology[] = {1, 3, 1};
-    int layerCount = sizeof(topology) / sizeof(topology[0]);
+    Net net = {0};
+    net.learnRate = 0.001f;
 
-    Net net = CreateNetwork(topology, layerCount, 0.01);
+    AddLayer(&net, _CreateLayer(0, 1, LINEAR));
+    AddLayer(&net, _CreateLayer(1, 10, RELU));
+    AddLayer(&net, _CreateLayer(10, 10, RELU));
+    AddLayer(&net, _CreateLayer(10, 1, LINEAR));
 
-    clock_t s = clock();
+    float avgCost = 0.0f;
 
-    for (unsigned long i = 0; i < 1000000; i++)
+    int batchSize = 1;
+    for (unsigned long i = 0; i < 110000; i++)
     {
-        FeedForward(&net, data[i % LEN], 1);        
+        _FeedForward(&net, data[i % LEN], 1);
+
         float target[] = {[0] = data[i % LEN][1]};
-        BackPropagate(&net, target, 1);
-        float avgCost = ComputeCost(net, target, 1);
-        printf("[%lu] cost: %f\n", i + 1, avgCost);
+
+        float cost = ComputeCost(net, target, 1);
+        avgCost += cost;
+
+        _BackPropagate(&net, target, 1, MEAN_SQUARE_ERROR);
+        _ComputeGradients(&net, batchSize);
+        
+        if (i % batchSize == 0) 
+        {
+            printf("[%lu] avg. cost: %f\n", i + 1, avgCost / 11.0f);
+            avgCost = 0.0f;
+            _Update(&net);
+            _ZeroGradients(&net);
+        }
     }
     
-    printf("training time: %ld cpu time\n", (clock() - s));
-
     for (int n = 0; n < LEN; n++)
     {
-        FeedForward(&net, data[n], 1);
+        _FeedForward(&net, data[n], 1);
         printf("output: %0.3f, expected %0.3f\n", net.layers[net.layerCount - 1].neurons[0].activation, data[n][1]);
     }
 
@@ -51,10 +65,10 @@ int main(int argc, char *argv[])
 
     // Net n = LoadNetworkFromFile("out.wanb");
 
-    // for(float i = 0; i < (2 * 3.14159); i += (2 * 3.14159) / 20)
+    // for(float i = 0; i < (2 * 3.14159); i += (2 * 3.14159) / 30)
     // {
     //     float input[] = {[0] = sinf(i)};
-    //     FeedForward(&net, input, 1);
+    //     _FeedForward(&net, input, 1);
     //     printf("output: %0.4f, expected: %0.4f,\n", net.layers[net.layerCount - 1].neurons[0].activation, input[0]);
     // }
 

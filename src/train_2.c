@@ -17,25 +17,31 @@ float data[4][3] = {
 
 int main(int argc, char *argv[])
 {
-    int topology[] = {2, 3, 1};
-    int layerCount = sizeof(topology) / sizeof(topology[0]);
+    Net net = {0};
+    net.learnRate = 0.01f;
 
-    Net net = CreateNetwork(topology, layerCount, 0.1);
+    AddLayer(&net, _CreateLayer(0, 2, LINEAR));
+    AddLayer(&net, _CreateLayer(2, 3, RELU));
+    AddLayer(&net, _CreateLayer(3, 1, LINEAR));
 
-    clock_t s = clock();
-    
-    for(unsigned long i = 0; i < 50000; i++)
+    for(unsigned long i = 0; i < 3000; i++)
     {
-        FeedForward(&net, data[i % LEN], 2);
-        float target[] = { data[i % LEN][2] };
-        BackPropagate(&net, target, 1);
-    }
+        _FeedForward(&net, data[i % LEN], 2);
 
-    printf("training time: %ld cpu time\n", (clock() - s));
+        float target[] = { data[i % LEN][2] };
+
+        float cost = ComputeCost(net, target, 1);
+        printf("[%lu] cost: %f\n", i + 1, cost);
+
+        _BackPropagate(&net, target, 1, MEAN_SQUARE_ERROR);
+        _ComputeGradients(&net, 1);
+        _Update(&net);
+        _ZeroGradients(&net);
+    }
 
     for (int n = 0; n < LEN; n++)
     {
-        FeedForward(&net, data[n], 2);
+        _FeedForward(&net, data[n], 2);
         printf("output: %0.3f, expected %0.3f\n", net.layers[net.layerCount - 1].neurons[0].activation, data[n][2]);
     }
 
