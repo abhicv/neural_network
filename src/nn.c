@@ -28,22 +28,7 @@ Neuron CreateNeuron(unsigned int neuronCountPreviousLayer)
     return neuron;
 }
 
-Layer CreateLayer(unsigned int neuronCountCurrentLayer, unsigned int neuronCountPreviousLayer)
-{
-    Layer layer = {0};
-    layer.neuronCount = neuronCountCurrentLayer;
-
-    layer.neurons = (Neuron *)malloc(sizeof(Neuron) * layer.neuronCount);
-
-    for (int i = 0; i < layer.neuronCount; i++)
-    {
-        layer.neurons[i] = CreateNeuron(neuronCountPreviousLayer);
-    }
-
-    return layer;
-}
-
-Layer _CreateLayer(unsigned int inputCount, unsigned int outputCount, enum ActivationFunction activationFunc)
+Layer CreateLayer(unsigned int inputCount, unsigned int outputCount, enum ActivationFunction activationFunc)
 {
     Layer layer = {0};
     layer.neuronCount = outputCount;
@@ -74,72 +59,6 @@ void AddLayer(Net *net, Layer layer)
     net->layers[net->layerCount - 1] = layer;
 }
 
-Net CreateNetwork(unsigned int *topology, unsigned int layerCount, float learnRate)
-{
-    Net net = {0};
-    net.layerCount = layerCount;
-    net.topology = topology;
-    net.layers = (Layer *)malloc(sizeof(Layer) * net.layerCount);
-    net.learnRate = learnRate;
-
-    for (int i = 0; i < net.layerCount; i++)
-    {
-        if (i == 0)
-        {
-            net.layers[i] = CreateLayer(topology[i], 0);
-        }
-        else
-        {
-            net.layers[i] = CreateLayer(topology[i], topology[i - 1]);
-        }
-    }
-    return net;
-}
-
-void FeedForward(Net *net, float *input, unsigned int inputCount)
-{
-    if (inputCount != net->layers[0].neuronCount)
-    {
-        printf("error: no. of inputs != no.of input layer neurons\n");
-        return;
-    }
-
-    // input layer
-    for (int i = 0; i < inputCount; i++)
-    {
-        net->layers[0].neurons[i].activation = input[i];
-    }
-
-    int outputLayerIndex = net->layerCount - 1;
-
-    // hidden layer and output layer
-    for (int i = 1; i < net->layerCount; i++)
-    {
-        for (int j = 0; j < net->layers[i].neuronCount; j++)
-        {
-            float weightedSum = 0;
-
-            for (int k = 0; k < net->layers[i - 1].neuronCount; k++)
-            {
-                weightedSum += net->layers[i].neurons[j].weights[k].data * net->layers[i - 1].neurons[k].activation;
-            }
-
-            weightedSum += net->layers[i].neurons[j].bias.data;
-            net->layers[i].neurons[j].z = weightedSum;
-            
-            if (i == outputLayerIndex)
-            {
-                net->layers[i].neurons[j].activation = weightedSum;
-            }
-            else
-            {
-                net->layers[i].neurons[j].activation = sigmoid(weightedSum);
-                // net->layers[i].neurons[j].activation = ReLU(weightedSum);
-            }
-        }
-    }
-}
-
 typedef float (*OneInputOneOuputFuncPtr) (float);
 
 OneInputOneOuputFuncPtr GetActivationFunction(enum ActivationFunction activationFunc)
@@ -167,7 +86,7 @@ OneInputOneOuputFuncPtr GetActivationDerivativeFunction(enum ActivationFunction 
     }
 }
 
-void _FeedForward(Net *net, float *input, unsigned int inputCount)
+void FeedForward(Net *net, float *input, unsigned int inputCount)
 {
     if (inputCount != net->layers[0].neuronCount)
     {
@@ -244,7 +163,7 @@ enum CostFunctionType
     CROSS_ENTROPY_LOSS
 };
 
-void _BackPropagate(Net *net, float *target, unsigned int targetCount, enum CostFunctionType costFunctionType)
+void BackPropagate(Net *net, float *target, unsigned int targetCount, enum CostFunctionType costFunctionType)
 {
     if (net->layers[net->layerCount - 1].neuronCount != targetCount)
     {
@@ -291,7 +210,7 @@ void _BackPropagate(Net *net, float *target, unsigned int targetCount, enum Cost
     }
 }
 
-void _ComputeGradients(Net *net, int batchSize)
+void ComputeGradients(Net *net, int batchSize)
 {
     for (int i = 1; i < net->layerCount; i++)
     {
@@ -322,7 +241,7 @@ void _ComputeGradients(Net *net, int batchSize)
     }
 }
 
-void _ZeroGradients(Net *net)
+void ZeroGradients(Net *net)
 {
     for (int i = 1; i < net->layerCount; i++)
     {
@@ -338,7 +257,7 @@ void _ZeroGradients(Net *net)
     }
 }
 
-void _Update(Net *net)
+void Update(Net *net)
 {
     for (int i = 1; i < net->layerCount; i++)
     {
@@ -353,72 +272,8 @@ void _Update(Net *net)
     }
 }
 
-void BackPropagate(Net *net, float *target, unsigned int targetCount)
-{
-    if (net->layers[net->layerCount - 1].neuronCount != targetCount)
-    {
-        printf("error: no.of neurons in output layer != target count\n");
-        return;
-    }
-
-    for (int i = net->layerCount - 1; i > 0; i--)
-    {
-        for (int k = 0; k < net->layers[i].neuronCount; k++)
-        {
-            net->layers[i].neurons[k].dcost_da = 0.0f;
-
-            if (i == net->layerCount - 1)
-            {
-                net->layers[i].neurons[k].dcost_da = 2 * (net->layers[net->layerCount - 1].neurons[k].activation - target[k]) / (float)targetCount;
-            }
-            else
-            {
-                for (int j = 0; j < net->layers[i + 1].neuronCount; j++)
-                {
-                    float da_dz = 0.0;
-                    if ((i + 1) == net->layerCount - 1)
-                    {
-                        da_dz = 1.0;
-                    }
-                    else
-                    {
-                        // da_dz = dsigmoid_dz(net->layers[i + 1].neurons[j].z);
-                        da_dz = dReLU_dz(net->layers[i + 1].neurons[j].z);
-                    }
-
-                    net->layers[i].neurons[k].dcost_da += net->layers[i + 1].neurons[j].weights[k].data * da_dz * net->layers[i + 1].neurons[j].dcost_da;
-                }
-            }
-        }
-    }
-
-    for (int i = 1; i < net->layerCount; i++)
-    {
-        for (int j = 0; j < net->layers[i].neuronCount; j++)
-        {
-            float dcost_dz = 0.0;
-            if (i == net->layerCount - 1)
-            {
-                dcost_dz = net->layers[i].neurons[j].dcost_da;
-            }
-            else
-            {
-                // dcost_dz = dsigmoid_dz(net->layers[i].neurons[j].z) * net->layers[i].neurons[j].dcost_da;
-                dcost_dz = dReLU_dz(net->layers[i].neurons[j].z) * net->layers[i].neurons[j].dcost_da;
-            }
-
-            for (int k = 0; k < net->layers[i - 1].neuronCount; k++)
-            {
-                net->layers[i].neurons[j].weights[k].data -= net->learnRate * net->layers[i - 1].neurons[k].activation * dcost_dz;
-            }
-
-            net->layers[i].neurons[j].bias.data -= net->learnRate * dcost_dz;
-        }
-    }
-}
-
 // mean squared error
-float ComputeCost(Net net, float *target, unsigned int targetCount)
+float ComputeMSE(Net net, float *target, unsigned int targetCount)
 {
     if (net.layers[net.layerCount - 1].neuronCount != targetCount)
     {
@@ -469,6 +324,7 @@ void LogWeights(Net net)
     }
 }
 
+// TODO: store the layer activation function as well
 void WriteNetworkToFile(Net net, const char *fileName)
 {
     FILE *out = fopen(fileName, "w");
@@ -501,6 +357,7 @@ void WriteNetworkToFile(Net net, const char *fileName)
     fclose(out);
 }
 
+// TODO: load the layer activation function as well
 Net LoadNetworkFromFile(const char *fileName)
 {
     Net net = {0};
@@ -523,8 +380,6 @@ Net LoadNetworkFromFile(const char *fileName)
         fscanf(in, " %d", topology + n);
     }
     fscanf(in, "\n");
-
-    net = CreateNetwork(topology, layerCount, 0.001);
 
     for (int i = 1; i < net.layerCount; i++)
     {

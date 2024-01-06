@@ -1,7 +1,4 @@
 #include <stdio.h>
-#include <stdlib.h>
-#include <math.h>
-#include <time.h>
 
 #include "nn.c"
 #include "util.c"
@@ -19,10 +16,10 @@ int main(int argc, char *argv[])
     Net net = {0};
     net.learnRate = 0.001f;
 
-    AddLayer(&net, _CreateLayer(0, inputCount, LINEAR));
-    AddLayer(&net, _CreateLayer(inputCount, 100, RELU));
-    AddLayer(&net, _CreateLayer(100, 100, RELU));
-    AddLayer(&net, _CreateLayer(100, 10, SOFTMAX));
+    AddLayer(&net, CreateLayer(0, inputCount, LINEAR));
+    AddLayer(&net, CreateLayer(inputCount, 100, RELU));
+    AddLayer(&net, CreateLayer(100, 100, RELU));
+    AddLayer(&net, CreateLayer(100, 10, SOFTMAX));
 
     int batchSize = 1;
     for (int n = 0; n < 1000; n++)
@@ -44,7 +41,7 @@ int main(int argc, char *argv[])
 
             int index = (int)*(label + (4 * 2) + i);
             
-            _FeedForward(&net, input, 28 * 28);
+            FeedForward(&net, input, 28 * 28);
 
             float prob = 0;
             int prediction = -1;
@@ -62,17 +59,16 @@ int main(int argc, char *argv[])
             float target[10] = {0};
             target[index] = 1.0f;
 
-            // float cost = ComputeCost(net, target, 10);
             float cost = ComputeCrossEntropyLoss(net, target, 10);
             avgCost += cost;
 
-            _BackPropagate(&net, target, 10, CROSS_ENTROPY_LOSS);
-            _ComputeGradients(&net, batchSize);
+            BackPropagate(&net, target, 10, CROSS_ENTROPY_LOSS);
+            ComputeGradients(&net, batchSize);
 
             if(i % batchSize == 0)
             {
-                _Update(&net);
-                _ZeroGradients(&net);
+                Update(&net);
+                ZeroGradients(&net);
             }
 
             if(0)
