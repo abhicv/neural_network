@@ -17,14 +17,10 @@ int main(int argc, char *argv[])
     // char *label = ReadBinaryFileIntoMemory("data/training_data/train-labels.idx1-ubyte");
     // if (!label) return 1;
 
-    Net net = LoadNetworkFromFile("digit_90.wanb");
-    net.layers[0].activationFunc = LINEAR;
-    net.layers[1].activationFunc = RELU;
-    net.layers[2].activationFunc = RELU;
-    net.layers[3].activationFunc = SOFTMAX;
+    Net net = LoadNetworkFromFile("digit_99.wanb");
     
     int correctPrediction = 0;
-    int total = 10;
+    int total = 10000;
     for (unsigned long i = 0; i < total; i++)
     {
         float input[28 * 28] = {0};
@@ -34,7 +30,7 @@ int main(int argc, char *argv[])
             input[n] = ((float)*(data + (4 * 4) + (i * 28 * 28) + n)) / 255.0f;
         }
 
-        _FeedForward(&net, input, 28 * 28);
+        FeedForward(&net, input, 28 * 28);
 
         int digit = (int)(*(label + (4 * 2) + i));
         // printf("digit: %d\n", digit);
@@ -56,14 +52,14 @@ int main(int argc, char *argv[])
         }
         else
         {
-            printf("output: ");
-            for (int n = 0; n < 10; n++)
-            {
-                float a = net.layers[net.layerCount - 1].neurons[n].activation;
-                printf("%f ", a);
-            }
-            printf("\n");
-            printf("target: %d, prediction: %d\n", digit, prediction);
+            // printf("output: ");
+            // for (int n = 0; n < 10; n++)
+            // {
+            //     float a = net.layers[net.layerCount - 1].neurons[n].activation;
+            //     printf("%f ", a);
+            // }
+            // printf("\n");
+            // printf("target: %d, prediction: %d\n", digit, prediction);
             // PrintImage(input, 28, 28);
         }
     }

@@ -86,6 +86,29 @@ OneInputOneOuputFuncPtr GetActivationDerivativeFunction(enum ActivationFunction 
     }
 }
 
+char *ActivationFunctionToString(enum ActivationFunction activationFunc)
+{
+    switch (activationFunc)
+    {
+    case LINEAR: return "LINEAR";
+    case SIGMOID: return "SIGMOID";
+    case TANH: return "TANH";
+    case RELU: return "RELU";
+    case SOFTMAX: return "SOFTMAX";
+    default: return "LINEAR";
+    }
+}
+
+enum ActivationFunction StringToActivationFunction(char *name)
+{
+    if(!strcmp(name, ActivationFunctionToString(LINEAR))) return LINEAR;
+    else if(!strcmp(name, ActivationFunctionToString(SIGMOID))) return SIGMOID;
+    else if(!strcmp(name, ActivationFunctionToString(TANH))) return TANH;
+    else if(!strcmp(name, ActivationFunctionToString(RELU))) return RELU;
+    else if(!strcmp(name, ActivationFunctionToString(SOFTMAX))) return SOFTMAX;
+    else return LINEAR;
+}
+
 void FeedForward(Net *net, float *input, unsigned int inputCount)
 {
     if (inputCount != net->layers[0].neuronCount)
@@ -324,7 +347,6 @@ void LogWeights(Net net)
     }
 }
 
-// TODO: store the layer activation function as well
 void WriteNetworkToFile(Net net, const char *fileName)
 {
     FILE *out = fopen(fileName, "w");
@@ -335,13 +357,13 @@ void WriteNetworkToFile(Net net, const char *fileName)
         return;
     }
 
-    fprintf(out, "l: %d\n", net.layerCount);
-    fprintf(out, "n:");
+    fprintf(out, "%d\n", net.layerCount); // layer count
+
+    // each layer info in the format: <neuron count> <activation function>
     for (int n = 0; n < net.layerCount; n++)
     {
-        fprintf(out, " %d", net.layers[n].neuronCount);
+        fprintf(out, "%d %s\n", net.layers[n].neuronCount,ActivationFunctionToString(net.layers[n].activationFunc));
     }
-    fprintf(out, "\n");
 
     for (int i = 1; i < net.layerCount; i++)
     {
@@ -349,15 +371,14 @@ void WriteNetworkToFile(Net net, const char *fileName)
         {
             for (int k = 0; k < net.layers[i - 1].neuronCount; k++)
             {
-                fprintf(out, "w: %0.6f\n", net.layers[i].neurons[j].weights[k].data);
+                fprintf(out, "%f\n", net.layers[i].neurons[j].weights[k].data);
             }
-            fprintf(out, "b: %0.6f\n", net.layers[i].neurons[j].bias.data);
+            fprintf(out, "%f\n", net.layers[i].neurons[j].bias.data);
         }
     }
     fclose(out);
 }
 
-// TODO: load the layer activation function as well
 Net LoadNetworkFromFile(const char *fileName)
 {
     Net net = {0};
@@ -371,15 +392,23 @@ Net LoadNetworkFromFile(const char *fileName)
         return net;
     }
 
-    fscanf(in, "l: %u\n", &layerCount);
-    unsigned int *topology = malloc(sizeof(unsigned int) * layerCount);
+    fscanf(in, "%d\n", &layerCount);
 
     fscanf(in, "n:");
     for (int n = 0; n < layerCount; n++)
     {
-        fscanf(in, " %d", topology + n);
+        char functionName[20] = {0};
+        int neuronCount = 0;
+        fscanf(in, "%d %s\n", &neuronCount, functionName);
+        if(n == 0)
+        {
+            AddLayer(&net, CreateLayer(0, neuronCount, LINEAR));
+        } 
+        else 
+        {
+            AddLayer(&net, CreateLayer(net.layers[net.layerCount - 1].neuronCount, neuronCount, StringToActivationFunction(functionName)));
+        }
     }
-    fscanf(in, "\n");
 
     for (int i = 1; i < net.layerCount; i++)
     {
@@ -387,15 +416,13 @@ Net LoadNetworkFromFile(const char *fileName)
         {
             for (int k = 0; k < net.layers[i - 1].neuronCount; k++)
             {
-                fscanf(in, "w: %f\n", &net.layers[i].neurons[j].weights[k].data);
+                fscanf(in, "%f\n", &net.layers[i].neurons[j].weights[k].data);
             }
-            fscanf(in, "b: %f\n", &net.layers[i].neurons[j].bias.data);
+            fscanf(in, "%f\n", &net.layers[i].neurons[j].bias.data);
         }
     }
 
     fclose(in);
-
-    free(topology);
 
     return net;
 }
