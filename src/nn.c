@@ -10,6 +10,7 @@ float RandomNorm()
 Neuron CreateNeuron(unsigned int neuronCountPreviousLayer)
 {
     Neuron neuron = {0};
+    neuron.dead = false;
 
     if (neuronCountPreviousLayer > 0)
     {
@@ -33,7 +34,8 @@ Layer CreateLayer(unsigned int inputCount, unsigned int outputCount, enum Activa
     Layer layer = {0};
     layer.neuronCount = outputCount;
     layer.activationFunc = activationFunc;
-
+    layer.dropRate = 0.5f;
+    
     layer.neurons = (Neuron *)malloc(sizeof(Neuron) * layer.neuronCount);
 
     for (int i = 0; i < layer.neuronCount; i++)
@@ -136,6 +138,19 @@ void FeedForward(Net *net, float *input, unsigned int inputCount)
     {
         for (int j = 0; j < net->layers[i].neuronCount; j++)
         {
+            // net->layers[i].neurons[j].dead = false;
+
+            // float dropRate = net->layers[i].dropRate;
+            // float throw = ((float)rand() / (float)RAND_MAX);
+
+            // if(throw < dropRate && i < (net->layerCount - 1))
+            // {
+            //     net->layers[i].neurons[j].dead = true;
+            //     net->layers[i].neurons[j].z = 0.0f;
+            //     net->layers[i].neurons[j].activation = 0.0f;
+            //     continue;
+            // }
+
             float weightedSum = 0;
             for (int k = 0; k < net->layers[i - 1].neuronCount; k++)
             {
@@ -218,7 +233,7 @@ void BackPropagate(Net *net, float *target, unsigned int targetCount, enum CostF
                     if(net->layers[i + 1].activationFunc == SOFTMAX)
                     {
                         float dcost_dz = net->layers[i + 1].neurons[j].dcost_da;
-                        net->layers[i].neurons[k].dcost_da += net->layers[i + 1].neurons[j].weights[k].data * dcost_dz;                                                
+                        net->layers[i].neurons[k].dcost_da += net->layers[i + 1].neurons[j].weights[k].data * dcost_dz;
                     }
                     else
                     {
@@ -255,7 +270,6 @@ void ComputeGradients(Net *net, int batchSize)
             for (int k = 0; k < net->layers[i - 1].neuronCount; k++)
             {
                 float gradient = (net->layers[i - 1].neurons[k].activation * dcost_dz) / (float)batchSize;
-                // printf("grad: %f\n", gradient);
                 net->layers[i].neurons[j].weights[k].grad += gradient;
             }
 
@@ -394,7 +408,6 @@ Net LoadNetworkFromFile(const char *fileName)
 
     fscanf(in, "%d\n", &layerCount);
 
-    fscanf(in, "n:");
     for (int n = 0; n < layerCount; n++)
     {
         char functionName[20] = {0};

@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <math.h>
 #include <string.h>
+#include <stdbool.h>
 
 enum ActivationFunction
 {
@@ -28,6 +29,7 @@ typedef struct Neuron
     Value *weights;
     Value bias;
     float dcost_da;
+    bool dead;
 } Neuron;
 
 typedef struct Layer
@@ -35,6 +37,7 @@ typedef struct Layer
     Neuron *neurons;
     unsigned int neuronCount;
     enum ActivationFunction activationFunc;
+    float dropRate;
 } Layer;
 
 typedef struct Net

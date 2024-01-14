@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     // char *label = ReadBinaryFileIntoMemory("data/training_data/train-labels.idx1-ubyte");
     // if (!label) return 1;
 
-    Net net = LoadNetworkFromFile("digit_99.wanb");
+    Net net = LoadNetworkFromFile("digit.wanb");
     
     int correctPrediction = 0;
     int total = 10000;
@@ -27,10 +27,21 @@ int main(int argc, char *argv[])
 
         for (int n = 0; n < (28 * 28); n++)
         {
-            input[n] = ((float)*(data + (4 * 4) + (i * 28 * 28) + n)) / 255.0f;
+            unsigned char c = (unsigned char)*(data + (4 * 4) + (i * 28 * 28) + n);
+            input[n] = (float)c / 255.0f;
         }
 
         FeedForward(&net, input, 28 * 28);
+
+        // for (int i = 1; i < net.layerCount; i++)
+        // {
+        //     int deadCount = 0;
+        //     for (int j = 0; j < net.layers[i].neuronCount; j++)
+        //     {
+        //         if(net.layers[i].neurons[j].dead) deadCount++;  
+        //     }
+        //     printf("dead percent [%d]: %f\n", i, (float)deadCount / (float)net.layers[i].neuronCount);
+        // }
 
         int digit = (int)(*(label + (4 * 2) + i));
         // printf("digit: %d\n", digit);
@@ -39,6 +50,7 @@ int main(int argc, char *argv[])
         int prediction = -1;
         for (int n = 0; n < 10; n++)
         {
+            // printf("%f\n", net.layers[net.layerCount - 1].neurons[n].activation);
             if(prob < net.layers[net.layerCount - 1].neurons[n].activation)
             {
                 prob = net.layers[net.layerCount - 1].neurons[n].activation;

@@ -14,14 +14,14 @@ int main(int argc, char *argv[])
     int inputCount = 28 * 28;
     
     Net net = {0};
-    net.learnRate = 0.1f;
+    net.learnRate = 0.03f;
 
     AddLayer(&net, CreateLayer(0, inputCount, LINEAR));
-    AddLayer(&net, CreateLayer(inputCount, 512, RELU));
-    AddLayer(&net, CreateLayer(512, 100, RELU));
+    AddLayer(&net, CreateLayer(inputCount, 100, RELU));
+    // AddLayer(&net, CreateLayer(512, 100, RELU));
     AddLayer(&net, CreateLayer(100, 10, SOFTMAX));
 
-    int batchSize = 100;
+    int batchSize = 10;
     for (int n = 0; n < 1000; n++)
     {
         printf("epoch : %u, ", n + 1);
@@ -34,9 +34,10 @@ int main(int argc, char *argv[])
         {
             float input[28 * 28] = {0};
 
-            for (int j = 0; j < (28 * 28); j++)
+            for (int n = 0; n < (28 * 28); n++)
             {
-                input[j] = ((float)*(data + (4 * 4) + (i * 28 * 28) + j)) / 255.0f;
+                unsigned char c = (unsigned char)*(data + (4 * 4) + (i * 28 * 28) + n);
+                input[n] = (float)c / 255.0f;
             }
 
             int index = (int)*(label + (4 * 2) + i);
