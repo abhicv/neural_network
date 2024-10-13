@@ -44,8 +44,10 @@ typedef struct Net
 {
     Layer *layers;
     unsigned int layerCount;
-    unsigned int *topology;
     float learnRate;
 } Net;
+
+extern __declspec(dllexport) void FeedForward(Net *net, float *input, unsigned int inputCount);
+extern __declspec(dllexport) Net LoadNetworkFromFile(const char *fileName);
 
 #endif // NN_H
